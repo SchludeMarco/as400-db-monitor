@@ -1,0 +1,34 @@
+{
+  "name": "as400-db-monitor-backend",
+  "version": "1.2.0",
+  "description": "Analysiert Db2 for i (AS/400) Datenbankprobleme (Sperren, SQL-Fehler) und liefert KI-gestuetzte Loesungsvorschlaege ueber die Claude API.",
+  "type": "module",
+  "main": "server.js",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "node --check server.js && node --check lib/db.js && node --check lib/queries.js && node --check lib/claude.js"
+  },
+  "dependencies": {
+    "@ibm/mapepire-js": "^0.6.1",
+    "@anthropic-ai/sdk": "^0.32.0",
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.4.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.9.0",
+    "@eslint/js": "^9.9.0",
+    "prettier": "^3.3.3"
+  }
+}

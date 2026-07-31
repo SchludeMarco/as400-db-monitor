@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Db2 for i — Systemwache</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg: #12151a;
+    --panel: #1a1f27;
+    --panel-raised: #202631;
+    --line: #2a313d;
+    --amber: #e8a33d;
+    --amber-dim: #8a6a35;
+    --teal: #3fbfae;
+    --critical: #e5484d;
+    --text: #e8e6e1;
+    --muted: #838a96;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+  }
+  header{
+    display:flex; align-items:baseline; gap:16px;
+    padding:20px 28px; border-bottom:1px solid var(--line);
+  }
+  header .tag{
+    font-family:var(--mono); font-size:12px; color:var(--bg);
+    background:var(--amber); padding:2px 8px; border-radius:2px;
+    letter-spacing:0.05em;
+  }
+  h1{ font-family:var(--mono); font-size:18px; font-weight:600; margin:0; letter-spacing:0.02em;}
+  header .sub{ color:var(--muted); font-size:13px; font-family:var(--mono);}
+  header button{
+    margin-left:auto; background:var(--panel-raised); color:var(--amber);
+    border:1px solid var(--amber-dim); font-family:var(--mono); font-size:13px;
+    padding:8px 16px; border-radius:3px; cursor:pointer;
+  }
+  header button:hover{ background:#262d38; }
+  header button:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+
+  main{ display:grid; grid-template-columns: 260px 1fr; gap:0; min-height:calc(100vh - 73px); }
+  @media (max-width: 780px){ main{ grid-template-columns: 1fr; } }
+
+  aside{
+    border-right:1px solid var(--line); padding:20px; font-family:var(--mono); font-size:12px;
+  }
+  aside h2{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin:0 0 12px;}
+  .stat{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line); }
+  .stat .n{ color:var(--amber); font-weight:600; }
+  .status-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; background:var(--teal); }
+  .status-dot.busy{ background:var(--amber); animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  section.feed{ padding:24px 28px; }
+  .empty{
+    color:var(--muted); font-family:var(--mono); font-size:13px;
+    border:1px dashed var(--line); border-radius:6px; padding:40px; text-align:center;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-left-width:3px;
+    border-radius:4px; padding:18px 20px; margin-bottom:14px;
+  }
+  .card.critical{ border-left-color:var(--critical); }
+  .card.warning{ border-left-color:var(--amber); }
+  .card.info{ border-left-color:var(--teal); }
+  .card-top{ display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+  .code{ font-family:var(--mono); font-size:12px; color:var(--muted); }
+  .sev{
+    font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:0.06em;
+    padding:2px 7px; border-radius:2px;
+  }
+  .sev.critical{ background:rgba(229,72,77,0.15); color:var(--critical); }
+  .sev.warning{ background:rgba(232,163,61,0.15); color:var(--amber); }
+  .sev.info{ background:rgba(63,191,174,0.15); color:var(--teal); }
+  .card h3{ margin:0 0 6px; font-size:15px; font-weight:600; }
+  .affected{ font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:10px; }
+  .explanation{ font-size:13.5px; line-height:1.55; color:var(--text); margin-bottom:10px; }
+  .suggestion{
+    background:var(--panel-raised); border-radius:4px; padding:10px 14px; font-size:13.5px; line-height:1.5;
+  }
+  .suggestion b{ color:var(--amber); }
+  .confidence{ display:flex; align-items:center; gap:8px; margin-top:12px; }
+  .confidence .bar{ flex:1; height:5px; background:var(--line); border-radius:3px; overflow:hidden; }
+  .confidence .fill{ height:100%; background:var(--teal); }
+  .confidence .val{ font-family:var(--mono); font-size:11px; color:var(--muted); }
+</style>
+</head>
+<body>
+  <header>
+    <span class="tag">DB2 FOR i</span>
+    <h1>Systemwache</h1>
+    <span class="sub" id="lastRun">noch keine Analyse gelaufen</span>
+    <button id="runBtn">Analyse starten</button>
+  </header>
+  <main>
+    <aside>
+      <h2>Status</h2>
+      <div class="stat"><span><span class="status-dot" id="connDot"></span>Verbindung</span><span class="n" id="connState">—</span></div>
+      <div class="stat"><span>Wartende Sperren</span><span class="n" id="statLocks">—</span></div>
+      <div class="stat"><span>Blockierte Transaktionen</span><span class="n" id="statTx">—</span></div>
+      <div class="stat"><span>SQL-Fehler (Job-Log)</span><span class="n" id="statErr">—</span></div>
+      <div class="stat"><span>Erkannte Probleme</span><span class="n" id="statIssues">—</span></div>
+    </aside>
+    <section class="feed" id="feed">
+      <div class="empty">Noch keine Daten. Klicke auf „Analyse starten“, um den aktuellen Zustand der AS/400 abzufragen.</div>
+    </section>
+  </main>
+
+<script>
+const runBtn = document.getElementById('runBtn');
+const feed = document.getElementById('feed');
+const lastRun = document.getElementById('lastRun');
+const connDot = document.getElementById('connDot');
+const connState = document.getElementById('connState');
+
+function sevRank(s){ return s === 'critical' ? 0 : s === 'warning' ? 1 : 2; }
+
+function clampPct(n){
+  const v = Math.round((Number(n) || 0) * 100);
+  return Math.min(100, Math.max(0, v));
+}
+
+const ALLOWED_SEV = new Set(['critical', 'warning', 'info']);
+function safeSev(s){ return ALLOWED_SEV.has(s) ? s : 'info'; }
+
+// WICHTIG: Werte aus der API (letztlich abgeleitet aus AS/400-Job-Namen,
+// SQL-Text, Fehlermeldungen + der Claude-Antwort) sind nicht vertrauenswuerdig.
+// Deshalb werden sie ausschliesslich per textContent gesetzt, nie per
+// innerHTML/String-Interpolation - das verhindert XSS zuverlaessig.
+function renderIssues(issues){
+  feed.innerHTML = '';
+  if(!issues.length){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'Keine Probleme erkannt. Die Db2-for-i-Instanz sieht aktuell unauffaellig aus.';
+    feed.appendChild(empty);
+    return;
+  }
+  const sorted = [...issues].sort((a,b)=>sevRank(safeSev(a.severity))-sevRank(safeSev(b.severity)));
+
+  for(const issue of sorted){
+    const sev = safeSev(issue.severity);
+    const pct = clampPct(issue.confidence);
+
+    const card = document.createElement('div');
+    card.className = `card ${sev}`;
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="code"></span>
+        <span class="sev ${sev}"></span>
+      </div>
+      <h3></h3>
+      <div class="affected"></div>
+      <div class="explanation"></div>
+      <div class="suggestion"><b>Vorschlag:</b> <span></span></div>
+      <div class="confidence">
+        <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
+        <span class="val">Konfidenz ${pct}%</span>
+      </div>
+    `;
+    card.querySelector('.code').textContent = issue.id ?? '';
+    card.querySelector('.sev').textContent = sev;
+    card.querySelector('h3').textContent = issue.title ?? 'Unbenanntes Problem';
+    card.querySelector('.affected').textContent = 'Betroffen: ' + (issue.affected ?? '—');
+    card.querySelector('.explanation').textContent = issue.explanation ?? '';
+    card.querySelector('.suggestion span').textContent = issue.suggestion ?? '';
+    feed.appendChild(card);
+  }
+}
+
+function getApiKey(){
+  let key = localStorage.getItem('as400_dashboard_api_key');
+  if(!key){
+    key = window.prompt('API-Key fuer das Dashboard eingeben:');
+    if(key) localStorage.setItem('as400_dashboard_api_key', key);
+  }
+  return key || '';
+}
+
+async function runAnalysis(){
+  runBtn.disabled = true;
+  runBtn.textContent = 'Analysiere …';
+  connDot.classList.add('busy');
+  connState.textContent = 'verbindet …';
+  try{
+    const res = await fetch('/api/analyze', {
+      headers: { 'x-api-key': getApiKey() }
+    });
+
+    if(res.status === 401){
+      localStorage.removeItem('as400_dashboard_api_key');
+      throw new Error('Ungueltiger API-Key. Bitte Seite neu laden und erneut eingeben.');
+    }
+
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Unbekannter Fehler');
+
+    connDot.classList.remove('busy');
+    connState.textContent = 'verbunden';
+    document.getElementById('statLocks').textContent = data.snapshot.locks.length;
+    document.getElementById('statTx').textContent = data.snapshot.transactions.length;
+    document.getElementById('statErr').textContent = data.snapshot.errors.length;
+    document.getElementById('statIssues').textContent = data.issues.length;
+    lastRun.textContent = 'letzte Analyse: ' + new Date(data.snapshot.timestamp).toLocaleString('de-DE');
+    renderIssues(data.issues);
+  }catch(err){
+    connDot.classList.remove('busy');
+    connState.textContent = 'Fehler';
+    feed.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'Fehler bei der Analyse: ' + err.message;
+    feed.appendChild(empty);
+  }finally{
+    runBtn.disabled = false;
+    runBtn.textContent = 'Analyse starten';
+  }
+}
+
+runBtn.addEventListener('click', runAnalysis);
+</script>
+</body>
+</html>
