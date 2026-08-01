@@ -90,6 +90,8 @@ export async function getRecentSqlErrors() {
 
 // Gesamtbild sammeln - wird an die KI-Analyse uebergeben
 export async function collectDbHealthSnapshot() {
+  if (DEMO_MODE) return generateDemoSnapshot();
+
   const [locks, transactions, statements, errors] = await Promise.all([
     getObjectLocks(),
     getTransactionInfo(),
