@@ -125,7 +125,8 @@ app.get("/api/snapshot", async (req, res) => {
   }
 });
 
-app.get("/api/health", (req, res) => res.json({ ok: true }));
+// Kein Auth noetig: erlaubt dem Dashboard, den Demo-Banner ohne API-Key anzuzeigen.
+app.get("/api/health", (req, res) => res.json({ ok: true, demoMode: DEMO_MODE }));
 
 // Generischer Fehler-Handler (faengt z.B. CORS-Fehler ab, statt Stacktraces zu leaken)
 app.use((err, req, res, next) => {
