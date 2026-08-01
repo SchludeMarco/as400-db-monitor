@@ -96,6 +96,11 @@ const apiLimiter = rateLimit({
 const CACHE_TTL_MS = 20_000;
 let cache = { at: 0, payload: null };
 
+// Unauthentifiziert und vor dem Auth-Middleware registriert: erlaubt dem
+// Dashboard, den Demo-Banner ohne API-Key anzuzeigen. Gibt keine sensiblen
+// Daten preis (nur ok-Flag + DEMO_MODE-Schalter).
+app.get("/api/health", (req, res) => res.json({ ok: true, demoMode: DEMO_MODE }));
+
 app.use("/api", apiLimiter, requireApiKey);
 
 app.get("/api/analyze", async (req, res) => {
