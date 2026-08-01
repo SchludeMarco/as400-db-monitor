@@ -235,6 +235,13 @@ async function runAnalysis(){
 }
 
 runBtn.addEventListener('click', runAnalysis);
+
+fetch('/api/health')
+  .then((res) => res.json())
+  .then((data) => {
+    if (data.demoMode) document.getElementById('demoBanner').hidden = false;
+  })
+  .catch(() => {});
 </script>
 </body>
 </html>
