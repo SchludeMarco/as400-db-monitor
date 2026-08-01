@@ -4,7 +4,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { collectDbHealthSnapshot } from "./lib/queries.js";
+import { collectDbHealthSnapshot, DEMO_MODE } from "./lib/queries.js";
 import { analyzeSnapshot } from "./lib/claude.js";
 
 // --- Startup-Validierung: ohne API_KEY starten wir bewusst nicht ---
