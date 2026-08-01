@@ -8,6 +8,9 @@
  * WHERE VIEW_NAME LIKE '%LOCK%'" pruefen, welche Services verfuegbar sind.
  */
 import { runQuery } from "./db.js";
+import { generateDemoSnapshot } from "./demoData.js";
+
+export const DEMO_MODE = process.env.DEMO_MODE === "true";
 
 // Aktive Sperren auf Objekt-/Datensatzebene inkl. wartender Jobs
 export async function getObjectLocks() {
